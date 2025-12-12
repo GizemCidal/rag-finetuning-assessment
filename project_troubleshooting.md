@@ -46,9 +46,9 @@ This document records the technical challenges encountered during the developmen
 **Cause:** The `qdrant-client` library version installed (1.16.2) had deprecated or removed the high-level `.search()` method in favor of a newer API.
 **Solution:** Updated `src/rag/vector_db.py` to use the correct `client.query_points()` method.
 
-### Issue: Qdrant File Lock (`RuntimeError`)
-**Problem:** Re-running the notebook cells resulted in `Storage folder ... is already accessed by another instance`.
-**Cause:** Qdrant in local mode locks the database directory. If a kernel is interrupted or a cell is re-run without closing the previous client, the lock remains held.
+### Issue: Qdrant File Lock (`RuntimeError` / `BlockingIOError`)
+**Problem:** Re-running notebook cells fails with `RuntimeError: Storage folder ... is already accessed` or `BlockingIOError: [Errno 35] Resource temporarily unavailable`.
+**Cause:** Qdrant in local, on-disk mode uses file locks to prevent concurrent access. If a kernel is interrupted or a cell is re-run without properly closing the previous client instance, the lock file remains held by the "zombie" process/thread.
 **Solution:**
-*   Added a `.close()` method to the `VectorDBHandler`.
-*   Advised restarting the Jupyter Kernel to force-release file locks.
+*   **Automatic:** Added a safety check in the notebook to call `vdb.close()` before initializing a new `VectorDBHandler`.
+*   **Manual:** Restart the Jupyter Kernel (*Kernel -> Restart*) to force-release all file locks held by the process.
