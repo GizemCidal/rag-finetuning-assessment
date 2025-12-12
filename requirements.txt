@@ -10,3 +10,16 @@ rouge_score
 numpy
 pandas
 ipywidgets
+peft
+trl
+scipy
+wandb
+python-dotenv
+peft
+trl
+scipy
+wandb
+peft
+trl
+scipy
+wandb
