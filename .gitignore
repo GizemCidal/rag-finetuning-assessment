@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+data/
+*.parquet
+rag_evaluation_results.csv
