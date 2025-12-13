@@ -1,5 +1,6 @@
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from sentence_transformers import SentenceTransformer
 import os
 from .config import RAGConfig
 from typing import List, Dict
@@ -62,3 +63,27 @@ class VectorDBHandler:
             limit=top_k
         ).points
         return results
+
+    def index_chunks(self, chunks: Dict):
+        """
+        Generates embeddings for child chunks and upserts them.
+        Args:
+           chunks: Output from HierarchicalChunker
+        """
+        children = chunks['children']
+        texts = [c['text'] for c in children]
+        
+        # Load model here or pass it in. For simplicity, we load it here as in the notebook flow.
+        # Ideally, this should be dependency injected, but adhering to the notebook's call pattern:
+        print(f"Loading embedding model: {self.config.EMBEDDING_MODEL_NAME}")
+        model = SentenceTransformer(self.config.EMBEDDING_MODEL_NAME)
+        
+        print(f"Generating embeddings for {len(texts)} chunks...")
+        embeddings = model.encode(texts, show_progress_bar=True).tolist()
+        
+        self.upsert_chunks(children, embeddings)
+
+    def close(self):
+        """Closes the Qdrant client connection."""
+        if hasattr(self, 'client'):
+            self.client.close()

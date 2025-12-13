@@ -1,13 +1,45 @@
-# Advanced RAG System for Gutenberg Books
+# Advanced RAG System for Gutenberg Books (Zuleika Dobson)
 
-This repository contains an Advanced Retrieval-Augmented Generation (RAG) system designed for resource-constrained environments (e.g., Google Colab Free Tier). It uses hierarchical chunking, a local on-disk vector database (Qdrant), and the `gemma-3-1b-it` LLM.
+This repository contains an Advanced Retrieval-Augmented Generation (RAG) system designed for resource-constrained environments (e.g., Google Colab Free Tier). It uses hierarchical chunking, a local on-disk vector database (Qdrant), a Re-ranking step, and the `gemma-3-1b-it` LLM.
 
 ## Features
 
-*   **Hierarchical Chunking**: Splits text into large "parent" chunks for context and smaller "child" chunks for precise retrieval.
-*   **Persistent Vector DB**: Uses **Qdrant** in local/disk mode to simulate persistence and handle larger-than-memory indices.
+*   **Hierarchical Chunking**: Splits text into large "parent" chunks (2000 chars) for context and smaller "child" chunks (500 chars) for precise retrieval.
+*   **Re-ranking**: Uses a Cross-Encoder (`ms-marco-MiniLM-L-6-v2`) to refine retrieval results.
+*   **Persistent Vector DB**: Uses **Qdrant** in local/disk mode to simulate persistence.
 *   **Local LLM**: Uses `google/gemma-3-1b-it` optimized for consumer hardware.
-*   **Dataset**: Automated pipeline for downloading "Dracula" (Project Gutenberg) and evaluating on NarrativeQA.
+
+## Project Structure
+
+*   `rag/`: Core implementation modules.
+    *   `chunking.py`: Hierarchical logic.
+    *   `vector_db.py`: Qdrant wrapper.
+    *   `retriever.py`: Embedding, parent resolution, and Re-ranking logic.
+    *   `generator.py`: LLM inference.
+    *   `config.py`: Configuration parameters.
+*   `scripts/`: Executable scripts.
+    *   `test_rag_comparison.py`: Main evaluation script comparing Base vs. Reranked RAG.
+    *   `benchmark_baseline.py`: script for zero-shot baseline evaluation.
+*   `requirements.txt`: Python dependencies.
+
+## Design Choices & Justifications
+
+### 1. Hierarchical Chunking
+**Why?** Standard chunking often cuts off context or retrieves too much noise.
+**Strategy:** We index small "child" chunks (granular) for vector search but return their "parent" chunks (broad) to the LLM.
+*   **Parent Size:** 2000 characters (capture full paragraphs/dialogue).
+*   **Child Size:** 500 characters (dense semantic meaning).
+
+### 2. Embedding Model (`all-MiniLM-L6-v2`)
+**Why?** The task requires running on Colab Free Tier.
+*   **Size:** Extremely lightweight (~80MB).
+*   **Performance:** Consistently ranks high on MTEB benchmarks for its size class.
+*   **Efficiency:** Allows fast batch encoding on CPU if GPU is busy with the LLM.
+
+### 3. Vector Database (Qdrant)
+**Why?**
+*   **Local Persistence:** Unlike in-memory FAISS, Qdrant allows saving/loading from disk (`./data/qdrant_db`), simulating a production environment.
+*   **API:** Developer-friendly Python client.
 
 ## Installation
 
@@ -19,32 +51,14 @@ This repository contains an Advanced Retrieval-Augmented Generation (RAG) system
 
 ## Usage
 
-Run the main experiment script:
-
+### 1. Run RAG Comparison (Main Demo)
+This script chunks the book, indexes it, and runs a comparison between Standard Vector Search and Re-ranked Search.
 ```bash
-python run_experiment.py
+python scripts/test_rag_comparison.py
 ```
 
-This script will automatically:
-- **Dataset:**
-  - **Source Text:** "The School for Scandal" by Richard Brinsley Sheridan (Project Gutenberg ID 1845).
-  - **QA Pairs:** Filtered from the `NarrativeQA` dataset (Test split) specifically for this book (40 pairs found).
-3.  Chunk and index the book into Qdrant (`./data/qdrant_db`).
-4.  Run the RAG evaluation loop.
-5.  Save results to `rag_evaluation_results.csv`.
-
-## Configuration
-
-You can adjust parameters in `src/rag/config.py`:
-*   `PARENT_CHUNK_SIZE` / `CHILD_CHUNK_SIZE`: Adjust for granularity.
-*   `TOP_K`: Number of chunks to retrieve.
-
-## Project Structure
-
-*   `src/rag/`: Core implementation modules.
-    *   `chunking.py`: Hierarchical logic.
-    *   `vector_db.py`: Qdrant wrapper.
-    *   `retriever.py`: Embedding and parent resolution.
-    *   `generator.py`: LLM inference.
-*   `run_experiment.py`: Main entry point.
-*   `requirements.txt`: Python dependencies.
+### 2. Run Baseline Benchmark
+To evaluate the model's performance without any RAG context:
+```bash
+python scripts/benchmark_baseline.py
+```

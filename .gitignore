@@ -1,7 +1,15 @@
-venv/
+# Python
 __pycache__/
-*.pyc
-.DS_Store
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Project Data
 data/
-*.parquet
-rag_evaluation_results.csv
+*.db
+*.sqlite
+parents_map.json
+
+# Jupyter
+.ipynb_checkpoints

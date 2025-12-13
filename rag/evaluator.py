@@ -6,12 +6,13 @@ class Evaluator:
         self.rouge = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
         self.smoothing = SmoothingFunction().method1
 
-    def calculate_metrics(self, reference: str, candidate: str):
+    def evaluate(self, candidate: str, reference: str):
         # BLEU-4
         # NLTK expects tokenized list for reference (list of lists) and candidate (list)
         ref_tokens = reference.split()
         cand_tokens = candidate.split()
         
+        # Note: reference is list of lists
         bleu4 = sentence_bleu([ref_tokens], cand_tokens, smoothing_function=self.smoothing)
         
         # ROUGE-L
@@ -19,6 +20,6 @@ class Evaluator:
         rouge_l = rouge_scores['rougeL'].fmeasure
         
         return {
-            "bleu4": bleu4,
-            "rouge_l": rouge_l
+            "bleu": bleu4,
+            "rouge": rouge_l
         }

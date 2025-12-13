@@ -3,13 +3,13 @@ import json
 import pandas as pd
 import torch
 from tqdm import tqdm
-from src.rag.config import RAGConfig
-from src.rag.data_loader import DataLoader
-from src.rag.chunking import HierarchicalChunker
-from src.rag.vector_db import VectorDBHandler
-from src.rag.retriever import HierarchicalRetriever
-from src.rag.generator import RAGGenerator
-from src.rag.evaluator import Evaluator
+from rag.config import RAGConfig
+from rag.data_loader import DataLoader
+from rag.chunking import HierarchicalChunker
+from rag.vector_db import VectorDBHandler
+from rag.retriever import HierarchicalRetriever
+from rag.generator import RAGGenerator
+from rag.evaluator import Evaluator
 
 def main():
     config = RAGConfig()

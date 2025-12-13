@@ -2,6 +2,7 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict
 from .config import RAGConfig
 from .vector_db import VectorDBHandler
+from .reranker import Reranker
 
 class HierarchicalRetriever:
     def __init__(self, config: RAGConfig, vector_db: VectorDBHandler, parents_map: Dict[str, str]):
@@ -11,22 +12,30 @@ class HierarchicalRetriever:
         
         print(f"Loading embedding model: {self.config.EMBEDDING_MODEL_NAME}")
         self.encoder = SentenceTransformer(self.config.EMBEDDING_MODEL_NAME)
+        
+        # Initialize Reranker
+        self.reranker = Reranker(config)
 
     def encode(self, texts: List[str]) -> List[List[float]]:
         """Generates embeddings."""
         return self.encoder.encode(texts).tolist()
 
-    def retrieve(self, query: str) -> str:
+    def retrieve_context(self, query: str, top_k: int = 5, use_reranker: bool = True) -> str:
         """
         Retrieves context for a query.
         Strategy:
         1. Embed Query
-        2. Search Top-K Child Chunks
+        2. Search Top-K * 3 Child Chunks (fetch more candidates)
         3. Identify unique Parent IDs from children
-        4. Return concatenated Parent Texts as context
+        4. Retrieve Parent Texts
+        5. (Optional) Rerank Parent Texts
+        6. Return Top-K Parents
         """
         query_vector = self.encode([query])[0]
-        search_results = self.vector_db.search(query_vector, top_k=self.config.TOP_K)
+        
+        # Fetch more candidates for re-ranking (e.g., 3x)
+        search_limit = top_k * 3 if use_reranker else top_k
+        search_results = self.vector_db.search(query_vector, top_k=search_limit)
         
         # Extract unique parent IDs to avoid duplicate context
         unique_parent_ids = []
@@ -39,14 +48,19 @@ class HierarchicalRetriever:
                 unique_parent_ids.append(pid)
         
         # Retrieve parent texts
-        context_parts = []
+        candidate_parents = []
         for pid in unique_parent_ids:
             if pid in self.parents_map:
-                context_parts.append(self.parents_map[pid])
-            else:
-                # Fallback if parent not found (shouldn't happen)
-                pass
+                candidate_parents.append(self.parents_map[pid])
+        
+        # Rerank if enabled
+        if use_reranker and candidate_parents:
+            # Rerank the parent chunks directly against the query
+            final_docs = self.reranker.rerank(query, candidate_parents, top_k=top_k)
+        else:
+            # Just take the top_k found
+            final_docs = candidate_parents[:top_k]
                 
         # Join parents with some separator
-        full_context = "\n\n".join(context_parts)
+        full_context = "\n\n".join(final_docs)
         return full_context

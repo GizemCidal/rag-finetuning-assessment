@@ -1,5 +1,9 @@
+```python
 from datasets import load_dataset
 import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 try:
     print("Loading dataset (streaming)...")

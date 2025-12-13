@@ -52,3 +52,21 @@ This document records the technical challenges encountered during the developmen
 **Solution:**
 *   **Automatic:** Added a safety check in the notebook to call `vdb.close()` before initializing a new `VectorDBHandler`.
 *   **Manual:** Restart the Jupyter Kernel (*Kernel -> Restart*) to force-release all file locks held by the process.
+
+## 4. Metadata & Performance Optimization
+
+### Issue: "School for Scandal" vs "Zuleika Dobson" (Metadata Mismatch)
+**Problem:** The `config.py` file incorrectly labeled ID 1845 as "The School for Scandal".
+**Cause:** A human error in commenting/titling. The actual content of the file (ID 1845) IS "Zuleika Dobson". The RAG system was working seamlessly, but the results were poor due to typical retrieval challenges, not wrong data.
+**Solution:**
+*   Verified file content using `head`.
+*   Corrected `config.py` comments and filename to `zuleika_dobson.txt`.
+
+### Issue: Low BLEU/ROUGE Scores and "Please provide context"
+**Problem:** The RAG system returned BLEU scores near 0.0 and frequently complained about missing context, even though the correct book was loaded.
+**Cause:**
+1.  **Small `TOP_K`:** Retrieving only 5 chunks (implied small context window) was insufficient to capture dispersed information in a novel.
+2.  **Small Chunk Size:** 250 characters is likely too small for a narrative text, splitting sentences or context meaningful for retrieval.
+**Solution:**
+*   Increased `TOP_K` from 5 to **10**.
+*   Doubled Chunk Sizes: Parent (1000 -> **2000**), Child (250 -> **500**).
