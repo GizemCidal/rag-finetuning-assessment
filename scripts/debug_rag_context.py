@@ -29,8 +29,15 @@ def debug_context():
     # Retrieve with Reranker
     context = retriever.retrieve_context(question, top_k=config.TOP_K, use_reranker=True)
     
-    print("\n--- RETRIEVED CONTEXT (Top K) ---")
-    print(context[:2000] + "... (truncated)")  # Print first 2000 chars
+    print("\n--- Retrieved Context (First 500 chars) ---")
+    print(context[:500] + "...")
+    
+    # Generate Answer (Deterministic)
+    generator = RAGGenerator(config)
+    answer = generator.generate_answer(question, context, do_sample=False)
+    
+    print("\n--- Generated Answer ---")
+    print(answer)
 
     print("\n--- ANALYSIS ---")
     print("Does the context contain the word 'love'? ", "love" in context.lower())

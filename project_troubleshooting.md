@@ -62,6 +62,16 @@ This document records the technical challenges encountered during the developmen
 *   Verified file content using `head`.
 *   Corrected `config.py` comments and filename to `zuleika_dobson.txt`.
 
+### Issue: RAG Pipeline Quality & Maintenance Gaps (P0/P1)
+**Date:** 2025-12-14
+**Symptoms:** Hardcoded values (`dracula_chunks`, `384`), redundant model loading (OOM risk), non-deterministic evaluation, and dirty text (Gutenberg headers).
+**Resolution:**
+1.  **Config Parametrization:** `COLLECTION_NAME` and `CHUNK_UNIT` added to `config.py`.
+2.  **Data Cleaning:** Implemented `_clean_gutenberg_text` in `DataLoader` to strip legal headers.
+3.  **Singleton Pattern:** Refactored `VectorDBHandler` and `HierarchicalRetriever` to accept an external `embedding_model` instance, preventing multiple loads.
+4.  **System Prompt & Deterministic Eval:** Updated `RAGGenerator` to use a safety system prompt and support `do_sample=False` for reproducible ROUGE scores.
+5.  **Test Script Fix:** `scripts/test_rag_comparison.py` failed with "Collection not found" after config change. Fixed by adding `vdb.create_collection()` and `vdb.index_chunks()` logic to the script's re-indexing block. Verified by deleting `data/` and running a full clean pass.
+val.
 ### Issue: Low BLEU/ROUGE Scores and "Please provide context"
 **Problem:** The RAG system returned BLEU scores near 0.0 and frequently complained about missing context, even though the correct book was loaded.
 **Cause:**

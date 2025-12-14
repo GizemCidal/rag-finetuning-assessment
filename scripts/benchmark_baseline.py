@@ -53,11 +53,7 @@ def run_baseline_benchmark():
         reference = item['answer1']
         
         # Zero-shot generation (No Context)
-        # We pass empty context or adjust the generator to handle it?
-        # generator.generate_answer usually takes (question, context).
-        # We can pass context="" or "Predictions based on internal knowledge."
-        
-        answer = generator.generate_answer(question, context="")
+        answer = generator.generate_answer(question, context="", do_sample=False)
         
         scores = evaluator.evaluate(answer, reference)
         

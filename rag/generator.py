@@ -30,36 +30,50 @@ class RAGGenerator:
             repetition_penalty=1.15
         )
 
-    def generate_answer(self, query: str, context: str) -> str:
-        """Generates an answer given the query and context."""
+    def generate_answer(self, query: str, context: str, do_sample: bool = True) -> str:
+        """
+        Generates an answer given the query and context.
+        Args:
+            query: The user question.
+            context: The retrieved context.
+            do_sample: If True, uses random sampling (creative). If False, uses greedy decoding (deterministic/eval).
+        """
         
-        # Simple RAG Prompt
-        prompt_template = f"""<start_of_turn>user
-You are a helpful assistant. Answer the question based ONLY on the provided context.
-
-Context:
-{context}
-
-Question:
-{query}<end_of_turn>
-<start_of_turn>model
-"""
-        # Note: Gemma uses specific chat templates. The above is a raw approximation or we can use apply_chat_template.
-        # Let's use clean apply_chat_template for best results.
+        # System Prompt for Safety & Grounding
+        system_prompt = (
+            "You are a helpful AI assistant. Your task is to answer the user's question based ONLY on the provided context below. "
+            "If the context does not contain the answer, politely state that you cannot answer based on the available information."
+        )
+        
+        # Construct Prompt using Chat Template
+        # Note: Gemma chat template might handle system roles differently, but usually 'user' with instructions works well.
         
         messages = [
-            {"role": "user", "content": f"Answer the question based ONLY on the provided context.\n\nContext:\n{context}\n\nQuestion:\n{query}"}
+            {"role": "user", "content": f"{system_prompt}\n\nContext:\n{context}\n\nQuestion:\n{query}"}
         ]
         
         prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
-        outputs = self.pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.7, top_p=0.9, top_k=50)
+        # Generation config
+        if do_sample:
+            gen_kwargs = {
+                "do_sample": True,
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "top_k": 50
+            }
+        else:
+            # Deterministic for Evaluation
+            gen_kwargs = {
+                "do_sample": False,
+                "temperature": 0.0, # Greedy
+            }
+
+        outputs = self.pipe(prompt, max_new_tokens=256, **gen_kwargs)
         
         generated_text = outputs[0]["generated_text"]
         
         # Extract only the model's response (remove the prompt)
-        # Usually pipeline returns the full text.
-        # We can strip the prompt.
         if generated_text.startswith(prompt):
             answer = generated_text[len(prompt):].strip()
         else:

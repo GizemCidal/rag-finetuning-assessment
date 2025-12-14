@@ -22,6 +22,11 @@ def run_comparison():
     # Try to load parents map from disk
     parents_map_path = os.path.join(config.DATA_DIR, 'parents_map.json')
     
+    # SINGLETON EMBEDDING MODEL (Moved up for Indexing)
+    from sentence_transformers import SentenceTransformer
+    print(f"Loading Singleton Embedding Model: {config.EMBEDDING_MODEL_NAME}")
+    embedding_model = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
+    
     if os.path.exists(parents_map_path):
         print(f"Loading parents map from {parents_map_path}...")
         with open(parents_map_path, 'r') as f:
@@ -39,10 +44,18 @@ def run_comparison():
         # parents is already a dict of {id: text}
         parents_map = chunks['parents']
         
+        parents_map = chunks['parents']
+        
         # Save for future
         with open(parents_map_path, 'w') as f:
             json.dump(parents_map, f)
             print("Saved generated parents map to disk.")
+
+        # INDEXING (New Logic)
+        print("Indexing chunks into Qdrant...")
+        vdb.create_collection()
+        vdb.index_chunks(chunks, embedding_model)
+        print("Indexing complete.")
     
     # Load QA Pairs for testing
     # Bypass datasets library due to potential environment/version conflicts in script mode
@@ -65,9 +78,8 @@ def run_comparison():
     # QA Pairs loaded above
     
     # SINGLETON EMBEDDING MODEL
-    from sentence_transformers import SentenceTransformer
-    print(f"Loading Singleton Embedding Model: {config.EMBEDDING_MODEL_NAME}")
-    embedding_model = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
+    # Already loaded above
+    # embedding_model = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
     
     retriever = HierarchicalRetriever(config, vdb, parents_map, embedding_model=embedding_model)
     generator = RAGGenerator(config)
@@ -85,12 +97,13 @@ def run_comparison():
         # 1. Base Retrieval
         print("  Running Base Retrieval...")
         ctx_base = retriever.retrieve_context(question, top_k=config.TOP_K, use_reranker=False)
-        ans_base = generator.generate_answer(question, ctx_base)
+        ans_base = generator.generate_answer(question, ctx_base, do_sample=False)
         
         # 2. Reranked Retrieval
         print("  Running Reranked Retrieval...")
         ctx_rerank = retriever.retrieve_context(question, top_k=config.TOP_K, use_reranker=True)
-        ans_rerank = generator.generate_answer(question, ctx_rerank)
+        # Note: We can also check deterministic vs creative. For Eval, prefer False.
+        ans_rerank = generator.generate_answer(question, ctx_rerank, do_sample=False)
         
         # Eval
         score_base = evaluator.evaluate(ans_base, reference)
