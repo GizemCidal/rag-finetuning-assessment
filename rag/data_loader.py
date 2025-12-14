@@ -26,6 +26,9 @@ class DataLoader:
             # Basic cleaning: remove Byte Order Mark if present
             if text.startswith('\ufeff'):
                 text = text[1:]
+
+            # Gutenberg Header/Footer Removal
+            text = self._clean_gutenberg_text(text)
                 
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(text)
@@ -35,6 +38,34 @@ class DataLoader:
         except Exception as e:
             print(f"Error downloading book: {e}")
             raise
+
+    def _clean_gutenberg_text(self, text: str) -> str:
+        """Removes Project Gutenberg headers and footers."""
+        # Simple heuristic markers
+        start_markers = ["*** START OF THE PROJECT GUTENBERG EBOOK", "*** START OF THIS PROJECT GUTENBERG EBOOK"]
+        end_markers = ["*** END OF THE PROJECT GUTENBERG EBOOK", "*** END OF THIS PROJECT GUTENBERG EBOOK"]
+        
+        start_idx = 0
+        end_idx = len(text)
+        
+        for marker in start_markers:
+            idx = text.find(marker)
+            if idx != -1:
+                # Move past the marker line (approx 80 chars or newline)
+                # Ensure we skip the marker line itself
+                start_idx = text.find('\n', idx) + 1
+                break
+                
+        for marker in end_markers:
+            idx = text.find(marker)
+            if idx != -1:
+                end_idx = idx
+                break
+                
+        if start_idx == 0 and end_idx == len(text):
+            print("Warning: Gutenberg markers not found. Skipping strip.")
+            
+        return text[start_idx:end_idx].strip()
 
     def load_qa_pairs(self):
         """Loads and filters QA pairs for the specific book from NarrativeQA."""
