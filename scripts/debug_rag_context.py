@@ -20,7 +20,11 @@ def debug_context():
     question = "Why does Zuleika reject the Duke?"
     print(f"--- Debugging Context for Question: '{question}' ---")
     
-    retriever = HierarchicalRetriever(config, vdb, parents_map)
+    # Singleton Model
+    from sentence_transformers import SentenceTransformer
+    embedding_model = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
+
+    retriever = HierarchicalRetriever(config, vdb, parents_map, embedding_model)
     
     # Retrieve with Reranker
     context = retriever.retrieve_context(question, top_k=config.TOP_K, use_reranker=True)

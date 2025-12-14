@@ -5,13 +5,13 @@ from .vector_db import VectorDBHandler
 from .reranker import Reranker
 
 class HierarchicalRetriever:
-    def __init__(self, config: RAGConfig, vector_db: VectorDBHandler, parents_map: Dict[str, str]):
+    def __init__(self, config: RAGConfig, vector_db: VectorDBHandler, parents_map: Dict[str, str], embedding_model):
         self.config = config
         self.vector_db = vector_db
         self.parents_map = parents_map # In-memory map of {parent_id: parent_text}
         
-        print(f"Loading embedding model: {self.config.EMBEDDING_MODEL_NAME}")
-        self.encoder = SentenceTransformer(self.config.EMBEDDING_MODEL_NAME)
+        # Use shared embedding model
+        self.encoder = embedding_model
         
         # Initialize Reranker
         self.reranker = Reranker(config)

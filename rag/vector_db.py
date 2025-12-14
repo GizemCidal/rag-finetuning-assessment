@@ -11,8 +11,8 @@ class VectorDBHandler:
         # Initialize Qdrant Client (Disk mode)
         print(f"Initializing Qdrant at {self.config.QDRANT_PATH}")
         self.client = QdrantClient(path=self.config.QDRANT_PATH)
-        self.collection_name = "dracula_chunks"
-        self.vector_size = 384 # Dimension for all-MiniLM-L6-v2
+        self.collection_name = self.config.COLLECTION_NAME
+        self.vector_size = self.config.EMBEDDING_DIM
 
     def create_collection(self):
         """Creates the Qdrant collection if it doesn't exist."""
@@ -64,22 +64,18 @@ class VectorDBHandler:
         ).points
         return results
 
-    def index_chunks(self, chunks: Dict):
+    def index_chunks(self, chunks: Dict, embedding_model):
         """
         Generates embeddings for child chunks and upserts them.
         Args:
            chunks: Output from HierarchicalChunker
+           embedding_model: Loaded SentenceTransformer model instance
         """
         children = chunks['children']
         texts = [c['text'] for c in children]
         
-        # Load model here or pass it in. For simplicity, we load it here as in the notebook flow.
-        # Ideally, this should be dependency injected, but adhering to the notebook's call pattern:
-        print(f"Loading embedding model: {self.config.EMBEDDING_MODEL_NAME}")
-        model = SentenceTransformer(self.config.EMBEDDING_MODEL_NAME)
-        
         print(f"Generating embeddings for {len(texts)} chunks...")
-        embeddings = model.encode(texts, show_progress_bar=True).tolist()
+        embeddings = embedding_model.encode(texts, show_progress_bar=True).tolist()
         
         self.upsert_chunks(children, embeddings)
 

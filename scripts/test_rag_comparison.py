@@ -62,7 +62,14 @@ def run_comparison():
         }
     ]
     
-    retriever = HierarchicalRetriever(config, vdb, parents_map)
+    # QA Pairs loaded above
+    
+    # SINGLETON EMBEDDING MODEL
+    from sentence_transformers import SentenceTransformer
+    print(f"Loading Singleton Embedding Model: {config.EMBEDDING_MODEL_NAME}")
+    embedding_model = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
+    
+    retriever = HierarchicalRetriever(config, vdb, parents_map, embedding_model=embedding_model)
     generator = RAGGenerator(config)
     evaluator = Evaluator()
     
