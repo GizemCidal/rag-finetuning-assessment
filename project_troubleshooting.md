@@ -72,6 +72,12 @@ This document records the technical challenges encountered during the developmen
 4.  **System Prompt & Deterministic Eval:** Updated `RAGGenerator` to use a safety system prompt and support `do_sample=False` for reproducible ROUGE scores.
 5.  **Test Script Fix:** `scripts/test_rag_comparison.py` failed with "Collection not found" after config change. Fixed by adding `vdb.create_collection()` and `vdb.index_chunks()` logic to the script's re-indexing block. Verified by deleting `data/` and running a full clean pass.
 val.
+
+### Issue: "Dirty" Text Affecting Retrieval (Hard Wraps)
+**Problem:** Diagnostic checks revealed ~5000 instances of "Hard Wraps" (sentences broken by newlines) in the raw Gutenberg text, which fragments semantic meaning.
+**Cause:** Legacy formatting of Project Gutenberg ebooks.
+**Resolution:** Implemented `_normalize_text` in `DataLoader` to unwrap lines and normalize whitespace, ensuring clean paragraph structures for chunking.
+
 ### Issue: Low BLEU/ROUGE Scores and "Please provide context"
 **Problem:** The RAG system returned BLEU scores near 0.0 and frequently complained about missing context, even though the correct book was loaded.
 **Cause:**

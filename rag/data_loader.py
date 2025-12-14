@@ -1,5 +1,6 @@
 import requests
 import os
+import re
 from datasets import load_dataset
 from .config import RAGConfig
 
@@ -29,6 +30,9 @@ class DataLoader:
 
             # Gutenberg Header/Footer Removal
             text = self._clean_gutenberg_text(text)
+            
+            # Advanced Cleaning (Unwrap & Normalize)
+            text = self._normalize_text(text)
                 
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(text)
@@ -66,6 +70,26 @@ class DataLoader:
             print("Warning: Gutenberg markers not found. Skipping strip.")
             
         return text[start_idx:end_idx].strip()
+
+    def _normalize_text(self, text: str) -> str:
+        """
+        Normalizes whitespace and unwraps hard-wrapped lines common in Gutenberg texts.
+        """
+        # 1. Protect Paragraphs: Convert double newlines to a special marker
+        # We look for 2 or more newlines and replace with a marker
+        text = re.sub(r'\n{2,}', ' [[PARAGRAPH]] ', text)
+        
+        # 2. Unwrap Lines: Convert remaining single newlines to spaces
+        # This fixes: "broken\nlines" -> "broken lines"
+        text = text.replace('\n', ' ')
+        
+        # 3. Restore Paragraphs: Convert marker back to double newlines
+        text = text.replace(' [[PARAGRAPH]] ', '\n\n')
+        
+        # 4. Collapse Whitespace: '  ' -> ' '
+        text = re.sub(r'[ \t]+', ' ', text)
+        
+        return text.strip()
 
     def load_qa_pairs(self):
         """Loads and filters QA pairs for the specific book from NarrativeQA."""
