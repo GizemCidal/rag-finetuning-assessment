@@ -52,3 +52,13 @@
     2. Increased `GRADIENT_ACCUMULATION_STEPS` from 4 to 8 (to maintain effective batch size).
     3. Enabled `gradient_checkpointing=True` in `TrainingArguments` (trades compute for memory).
     4. Added `torch.cuda.empty_cache()` at script start.
+
+## Issue 9: Colab Runtime Disconnection (Free Tier Limits)
+- **Symptom**: "Runtime disconnected" message during long-running GaLore training (~2.5 hours).
+- **Cause**: Google Colab Free Tier has strict usage limits and idle timeouts. Intermediate checkpoints were not frequent enough to resume efficiently.
+- **Fix**: Updated `train_galore.py` to save checkpoints every 200 steps instead of only at the end of epoch, allowing for granular resumption.
+    ```python
+    save_strategy="steps",
+    save_steps=200,
+    save_total_limit=2
+    ```

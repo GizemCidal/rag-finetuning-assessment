@@ -89,7 +89,8 @@ To understand the persistent low scores despite optimization (Reranking + Top-K=
 ## 7. Next Steps: PEFT Comparison Study
 While domain adaptation for this specific book remains a valid path, the project will now shift focus to a broader study of **Parameter-Efficient Fine-Tuning (PEFT)** techniques.
 1.  **Objective:** Compare **QLoRA** vs **GaLore** on the `gemma-3-1b-it` model.
-2.  **Dataset:** A mixed instruction-tuning dataset (Alpaca + Tulu + Ultrachat) to improve general instruction following capabilities, rather than overfitting to a single literary work.
+2.  **Dataset:** A mixed instruction-tuning dataset (Alpaca + Tulu + Ultrachat) to improve general instruction following capabilities.
+3.  **Challenges:** Training large models on Google Colab Free Tier (T4 GPU) requires aggressive memory optimization (Batch Size=1, Gradient Checkpointing) and frequent checkpointing strategies to handle runtime disconnections (~2.5h limit).
 
 ## 8. Conclusion
 The implemented system demonstrates that while advanced RAG techniques (Hierarchical Chunking, Qdrant Persistence, Re-ranking) are successfully deployed, they hit a hard ceiling when the *semantic understanding* of the underlying models does not match the domain (Historical Literature). The path forward is now to explore efficient training methods (PEFT) to fundamentally enhance the model's capabilities.

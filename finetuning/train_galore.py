@@ -106,7 +106,9 @@ def main():
         learning_rate=LEARNING_RATE,
         bf16=True,
         logging_steps=10,
-        save_strategy="epoch",
+        save_strategy="steps",
+        save_steps=200,
+        save_total_limit=2,
         eval_strategy="no",
         gradient_checkpointing=True, # Critical for saving memory
         max_grad_norm=0.3,
