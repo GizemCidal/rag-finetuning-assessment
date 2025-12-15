@@ -1,0 +1,13 @@
+# Finetuning Dependencies
+torch
+transformers
+datasets
+peft
+trl
+bitsandbytes
+scipy
+accelerate
+galore-torch
+rouge_score
+nltk
+# unsloth # Optional, recommended for Colab with Tesla T4
