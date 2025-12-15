@@ -33,22 +33,35 @@ MAX_SEQ_LENGTH = 1024
 def format_instruction(sample):
     """
     Format the instruction for Gemma.
-    Gemma uses specific chat templates, but for SFT we can mostly stick to the prompt format
-    or use the chat template if we want to retain the 'instruction-tuned' nature appropriately.
-    For simplicity and consistency with the task 'Instruction/Input/Response' format:
+    Handles both single example (dict) and batch (dict of lists).
+    Returns a list of strings.
     """
-    instruction = sample['instruction']
-    input_text = sample.get('input', '')
-    output_text = sample['output']
-    
-    # Standard Alpaca-style prompt, or we can use Gemma's chat template structure `<start_of_turn>...`
-    # Let's use a clear Instruction format that the model can learn.
-    if input_text:
-        text = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n{output_text}"
+    # Check if we have a batch (lists) or single item
+    # SFTTrainer usually passes a batch
+    if isinstance(sample['instruction'], list):
+        output_texts = []
+        for i in range(len(sample['instruction'])):
+            instruction = sample['instruction'][i]
+            input_text = sample['input'][i] if 'input' in sample and sample['input'][i] else ""
+            output_text = sample['output'][i]
+            
+            if input_text:
+                text = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n{output_text}"
+            else:
+                text = f"### Instruction:\n{instruction}\n\n### Response:\n{output_text}"
+            output_texts.append(text)
+        return output_texts
     else:
-        text = f"### Instruction:\n{instruction}\n\n### Response:\n{output_text}"
-    
-    return text
+        # Single example
+        instruction = sample['instruction']
+        input_text = sample.get('input', '')
+        output_text = sample['output']
+        
+        if input_text:
+            text = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n{output_text}"
+        else:
+            text = f"### Instruction:\n{instruction}\n\n### Response:\n{output_text}"
+        return [text] # Must return list
 
 def main():
     print(f"Loading model: {MODEL_ID}")
@@ -68,13 +81,13 @@ def main():
         device_map="auto",
         trust_remote_code=True
     )
-    model.config.use_cache = False # Silence warnings during training
+    model.config.use_cache = False
     model.config.pretraining_tp = 1 
     
     # 3. Load Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right" # Fix for fp16
+    tokenizer.padding_side = "right"
 
     # 4. Prepare for LoRA
     model = prepare_model_for_kbit_training(model)
@@ -101,13 +114,13 @@ def main():
         fp16=True,
         logging_steps=10,
         save_strategy="epoch",
-        evaluation_strategy="no", # We eval separately
+        eval_strategy="no",
         optim="paged_adamw_32bit",
         max_grad_norm=0.3,
         warmup_ratio=0.03,
         lr_scheduler_type="constant",
         push_to_hub=False,
-        report_to="none" # Disable wandb for local test to avoid auth issues if not set up
+        report_to="none"
     )
 
     # 7. Trainer
