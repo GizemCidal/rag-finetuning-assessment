@@ -27,8 +27,8 @@ UPDATE_PROJ_GAP = 200
 SCALE = 2
 TARGET_MODULES = ["attn", "mlp"]
 
-BATCH_SIZE = 2
-GRADIENT_ACCUMULATION_STEPS = 4
+BATCH_SIZE = 1
+GRADIENT_ACCUMULATION_STEPS = 8 # Increased to match effective batch size
 LEARNING_RATE = 2e-5
 NUM_EPOCHS = 1
 MAX_SEQ_LENGTH = 1024
@@ -57,6 +57,7 @@ def format_instruction(sample):
         return [text]
 
 def main():
+    torch.cuda.empty_cache() # Clear any residual memory
     print(f"Loading model: {MODEL_ID}")
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
@@ -107,6 +108,7 @@ def main():
         logging_steps=10,
         save_strategy="epoch",
         eval_strategy="no",
+        gradient_checkpointing=True, # Critical for saving memory
         max_grad_norm=0.3,
         warmup_ratio=0.03,
         lr_scheduler_type="constant",
