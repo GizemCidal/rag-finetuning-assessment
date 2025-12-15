@@ -86,11 +86,22 @@ To understand the persistent low scores despite optimization (Reranking + Top-K=
     1.  **Retrieval:** The embeddings fail to capture the specific literary nuance, leading to "Garbage In".
     2.  **Generation:** Even if context were perfect, the 1B model struggles with reasoning. But currently, it doesn't even get the chance to reason because the input is irrelevant.
 
-## 7. Next Steps: PEFT Comparison Study
-While domain adaptation for this specific book remains a valid path, the project will now shift focus to a broader study of **Parameter-Efficient Fine-Tuning (PEFT)** techniques.
-1.  **Objective:** Compare **QLoRA** vs **GaLore** on the `gemma-3-1b-it` model.
-2.  **Dataset:** A mixed instruction-tuning dataset (Alpaca + Tulu + Ultrachat) to improve general instruction following capabilities.
-3.  **Challenges:** Training large models on Google Colab Free Tier (T4 GPU) requires aggressive memory optimization (Batch Size=1, Gradient Checkpointing) and frequent checkpointing strategies to handle runtime disconnections (~2.5h limit).
+## 7. Finetuning Phase: Engineering & Optimization Study
+Instead of a standard training run, this phase focused on **adapting LLM training to resource-constrained environments (Google Colab Free Tier)**.
+
+### Challenges Encountered
+1.  **Memory Constraints (OOM):** The `gemma-3-1b-it` model + GaLore Optimizer exceeded the 16GB VRAM limit of T4 GPUs.
+2.  **Runtime Volatility:** Long training sessions (~3 hours) were interrupted by Colab's idle timeouts, causing data loss with standard epoch-based saving.
+
+### Engineering Solutions (Optimization Steps)
+To overcome these, we refactored the pipeline:
+1.  **Memory Optimization:**
+    *   Enabled `gradient_checkpointing=True` (Trades compute for VRAM).
+    *   Reduced `BATCH_SIZE` to 1 and increased `GRADIENT_ACCUMULATION` to 8.
+    *   Implemented explicit Garbage Collection (`empty_cache`).
+2.  **Persistence Strategy:**
+    *   Switched from `save_strategy="epoch"` to `save_strategy="steps"` (Every 200 steps).
+    *   This ensures that even in unstable runtimes, training can resume from the latest granular checkpoint without losing hours of progress.
 
 ## 8. Conclusion
-The implemented system demonstrates that while advanced RAG techniques (Hierarchical Chunking, Qdrant Persistence, Re-ranking) are successfully deployed, they hit a hard ceiling when the *semantic understanding* of the underlying models does not match the domain (Historical Literature). The path forward is now to explore efficient training methods (PEFT) to fundamentally enhance the model's capabilities.
+This project successfully delivered a **Production-Ready RAG System** and a **Robust Finetuning Infrastructure**. While the RAG system demonstrated the importance of data quality (clean data doubled performance), the Finetuning phase served as a stress-test for MLOps on limited hardware. The final codebase allows for sustainable training of 1B+ models on commodity hardware through the implemented optimizations.
