@@ -15,12 +15,3 @@ trl
 scipy
 wandb
 python-dotenv
-accelerate
-peft
-trl
-scipy
-wandb
-peft
-trl
-scipy
-wandb
