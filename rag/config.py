@@ -3,7 +3,7 @@ import os
 class RAGConfig:
     # Paths
     PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+    DATA_DIR = os.path.join(PROJECT_ROOT, 'rag', 'data')
     QDRANT_PATH = os.path.join(DATA_DIR, 'qdrant_db')
     
     # Text Data

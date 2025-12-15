@@ -86,10 +86,10 @@ To understand the persistent low scores despite optimization (Reranking + Top-K=
     1.  **Retrieval:** The embeddings fail to capture the specific literary nuance, leading to "Garbage In".
     2.  **Generation:** Even if context were perfect, the 1B model struggles with reasoning. But currently, it doesn't even get the chance to reason because the input is irrelevant.
 
-## 7. Next Steps: The Case for Finetuning
-Given that "Off-the-shelf" components failed to bridge the gap for this specific domain (Literary QA), **Finetuning** is the necessary next step.
-1.  **Finetuning the LLM:** To teach it the style of valid answers.
-2.  (Optional) **Finetuning Embeddings:** Or switching to a larger model to improve retrieval relevance.
+## 7. Next Steps: PEFT Comparison Study
+While domain adaptation for this specific book remains a valid path, the project will now shift focus to a broader study of **Parameter-Efficient Fine-Tuning (PEFT)** techniques.
+1.  **Objective:** Compare **QLoRA** vs **GaLore** on the `gemma-3-1b-it` model.
+2.  **Dataset:** A mixed instruction-tuning dataset (Alpaca + Tulu + Ultrachat) to improve general instruction following capabilities, rather than overfitting to a single literary work.
 
 ## 8. Conclusion
-The implemented system demonstrates that while advanced RAG techniques (Hierarchical Chunking, Qdrant Persistence, Re-ranking) are successfully deployed, they hit a hard ceiling when the *semantic understanding* of the underlying models does not match the domain (Historical Literature). The path forward is clearly defined: Domain Adaptation via Finetuning.
+The implemented system demonstrates that while advanced RAG techniques (Hierarchical Chunking, Qdrant Persistence, Re-ranking) are successfully deployed, they hit a hard ceiling when the *semantic understanding* of the underlying models does not match the domain (Historical Literature). The path forward is now to explore efficient training methods (PEFT) to fundamentally enhance the model's capabilities.

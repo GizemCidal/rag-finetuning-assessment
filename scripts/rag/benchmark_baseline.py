@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 # Add project root to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from rag.config import RAGConfig
 from rag.generator import RAGGenerator

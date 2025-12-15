@@ -14,6 +14,9 @@ import shutil
 # For the purpose of "Does it work?", we will try to run the real components 
 # but mock the LLM generation which requires Auth/Download.
 
+# Ensure src is in path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from rag.config import RAGConfig
 from rag.data_loader import DataLoader
 from rag.chunking import HierarchicalChunker
