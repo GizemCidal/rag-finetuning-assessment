@@ -43,3 +43,12 @@
 - **Symptom**: `NotImplementedError: The operator 'bitsandbytes::optimizer_update_8bit_blockwise' is not currently implemented for the MPS device.`
 - **Cause**: `GaLoreAdamW8bit` uses `bitsandbytes` for 8-bit optimization, which lacks MPS support.
 - **Conclusion**: `train_galore.py` logic is verified (imports, data loading, model init succeeded). Training requires NVIDIA GPU (Colab).
+
+## Issue 8: CUDA Out of Memory (OOM) with GaLore
+- **Symptom**: `torch.OutOfMemoryError: CUDA out of memory` on T4 GPU (16GB).
+- **Cause**: The combination of `gemma-3-1b` + Optimizer States + batch size of 2 exceeded 16GB VRAM.
+- **Fix**:
+    1. Reduced `BATCH_SIZE` from 2 to 1.
+    2. Increased `GRADIENT_ACCUMULATION_STEPS` from 4 to 8 (to maintain effective batch size).
+    3. Enabled `gradient_checkpointing=True` in `TrainingArguments` (trades compute for memory).
+    4. Added `torch.cuda.empty_cache()` at script start.
