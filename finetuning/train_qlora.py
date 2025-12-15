@@ -1,22 +1,31 @@
-import os
 import sys
+import os
+
+# Add project root to sys.path to access the finetuning package
+# This allows running `python finetuning/train_qlora.py` from project root
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+"""
+Finetunes Gemma 2 9B using QLoRA (Quantized Low-Rank Adaptation).
+Uses 4-bit quantization and LoRA adapters for memory efficiency.
+"""
+
 import torch
 import json
 from datasets import load_dataset
 from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
     BitsAndBytesConfig,
     TrainingArguments,
 )
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, prepare_model_for_kbit_training
 from trl import SFTTrainer
+from finetuning.common import (
+    MODEL_ID, TRAIN_FILE, OUTPUT_DIR_QLORA, MAX_SEQ_LENGTH,
+    format_instruction, load_tokenizer_and_model
+)
 
 # Configuration
-MODEL_ID = "google/gemma-3-1b-it"
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-TRAIN_FILE = os.path.join(DATA_DIR, 'finetune_train.jsonl')
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'output_qlora')
+OUTPUT_DIR = OUTPUT_DIR_QLORA
 
 # Hyperparameters
 LORA_R = 16
@@ -28,45 +37,19 @@ BATCH_SIZE = 2
 GRADIENT_ACCUMULATION_STEPS = 4
 LEARNING_RATE = 2e-4
 NUM_EPOCHS = 1
-MAX_SEQ_LENGTH = 1024
-
-def format_instruction(sample):
-    """
-    Format the instruction for Gemma.
-    Handles both single example (dict) and batch (dict of lists).
-    Returns a list of strings.
-    """
-    # Check if we have a batch (lists) or single item
-    # SFTTrainer usually passes a batch
-    if isinstance(sample['instruction'], list):
-        output_texts = []
-        for i in range(len(sample['instruction'])):
-            instruction = sample['instruction'][i]
-            input_text = sample['input'][i] if 'input' in sample and sample['input'][i] else ""
-            output_text = sample['output'][i]
-            
-            if input_text:
-                text = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n{output_text}"
-            else:
-                text = f"### Instruction:\n{instruction}\n\n### Response:\n{output_text}"
-            output_texts.append(text)
-        return output_texts
-    else:
-        # Single example
-        instruction = sample['instruction']
-        input_text = sample.get('input', '')
-        output_text = sample['output']
-        
-        if input_text:
-            text = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n{output_text}"
-        else:
-            text = f"### Instruction:\n{instruction}\n\n### Response:\n{output_text}"
-        return [text] # Must return list
 
 def main():
-    print(f"Loading model: {MODEL_ID}")
+    """
+    Executes the QLoRA training pipeline.
     
-    # 1. Quantization Config
+    Steps:
+    1. Loads tokenizer and 4-bit quantized model.
+    2. Prepares model for k-bit training and attaches LoRA adapters.
+    3. Loads the dataset.
+    4. Initializes SFTTrainer with training arguments.
+    5. Runs training and saves the adapter weights.
+    """
+    # Quantization Config
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -74,22 +57,10 @@ def main():
         bnb_4bit_use_double_quant=True,
     )
 
-    # 2. Load Base Model
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True
-    )
-    model.config.use_cache = False
-    model.config.pretraining_tp = 1 
+    # Load Tokenizer & Model
+    tokenizer, model = load_tokenizer_and_model(MODEL_ID, quantization_config=bnb_config)
     
-    # 3. Load Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
-
-    # 4. Prepare for LoRA
+    # Prepare for LoRA
     model = prepare_model_for_kbit_training(model)
     peft_config = LoraConfig(
         r=LORA_R,
@@ -100,11 +71,11 @@ def main():
         target_modules=TARGET_MODULES
     )
     
-    # 5. Load Dataset
+    # Load Dataset
     print(f"Loading dataset from {TRAIN_FILE}...")
     dataset = load_dataset('json', data_files=TRAIN_FILE, split='train')
     
-    # 6. Training Arguments
+    # Training Arguments
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
         num_train_epochs=NUM_EPOCHS,
@@ -123,7 +94,7 @@ def main():
         report_to="none"
     )
 
-    # 7. Trainer
+    # Trainer
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,

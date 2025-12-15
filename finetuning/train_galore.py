@@ -1,13 +1,25 @@
 import os
 import sys
+
+# Add project root to sys.path to access the finetuning package
+# This allows running `python finetuning/train_galore.py` from project root
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+"""
+Finetunes Gemma 2 9B using GaLore (Gradient Low-Rank Projection).
+Uses 8-bit optimizer and gradient projection for memory-efficient full-parameter training.
+"""
+
 import torch
 from datasets import load_dataset
 from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
     TrainingArguments,
 )
 from trl import SFTTrainer
+from finetuning.common import (
+    MODEL_ID, TRAIN_FILE, OUTPUT_DIR_GALORE, MAX_SEQ_LENGTH,
+    format_instruction, load_tokenizer_and_model
+)
 
 try:
     from galore_torch import GaLoreAdamW, GaLoreAdamW8bit
@@ -16,10 +28,7 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-MODEL_ID = "google/gemma-3-1b-it"
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-TRAIN_FILE = os.path.join(DATA_DIR, 'finetune_train.jsonl')
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'output_galore')
+OUTPUT_DIR = OUTPUT_DIR_GALORE
 
 # Hyperparameters
 RANK = 128
@@ -31,46 +40,23 @@ BATCH_SIZE = 1
 GRADIENT_ACCUMULATION_STEPS = 8 # Increased to match effective batch size
 LEARNING_RATE = 2e-5
 NUM_EPOCHS = 1
-MAX_SEQ_LENGTH = 1024
-
-def format_instruction(sample):
-    if isinstance(sample['instruction'], list):
-        output_texts = []
-        for i in range(len(sample['instruction'])):
-            instruction = sample['instruction'][i]
-            input_text = sample['input'][i] if 'input' in sample and sample['input'][i] else ""
-            output_text = sample['output'][i]
-            if input_text:
-                text = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n{output_text}"
-            else:
-                text = f"### Instruction:\n{instruction}\n\n### Response:\n{output_text}"
-            output_texts.append(text)
-        return output_texts
-    else:
-        instruction = sample['instruction']
-        input_text = sample.get('input', '')
-        output_text = sample['output']
-        if input_text:
-            text = f"### Instruction:\n{instruction}\n\n### Input:\n{input_text}\n\n### Response:\n{output_text}"
-        else:
-            text = f"### Instruction:\n{instruction}\n\n### Response:\n{output_text}"
-        return [text]
 
 def main():
-    torch.cuda.empty_cache() # Clear any residual memory
-    print(f"Loading model: {MODEL_ID}")
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        trust_remote_code=True,
-        use_cache=False
-    )
+    """
+    Executes the GaLore training pipeline.
     
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
-
+    Steps:
+    1. Loads tokenizer and model (no quantization).
+    2. Loads the dataset.
+    3. Configures GaLore optimizer for specific target modules.
+    4. Initializes SFTTrainer with training arguments.
+    5. Runs training and saves the final model.
+    """
+    torch.cuda.empty_cache() # Clear any residual memory
+    
+    # Load Tokenizer & Model
+    tokenizer, model = load_tokenizer_and_model(MODEL_ID, use_cache=False)
+    
     print(f"Loading dataset from {TRAIN_FILE}...")
     dataset = load_dataset('json', data_files=TRAIN_FILE, split='train')
 

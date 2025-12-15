@@ -9,7 +9,7 @@ for row in ds:
     # Check if title mentions Zuleika
     # The title might be in doc['text'] or inferred? 
     # Actually NarrativeQA 'document' content usually has a 'title' field or we check the start of text?
-    # Let's check the URL or simply print items where the question contains "Zuleika"
+    # Check the URL or print items where the question contains "Zuleika"
     
     if "Zuleika" in row['question']['text']:
         print(f"--- Found Entry ---")

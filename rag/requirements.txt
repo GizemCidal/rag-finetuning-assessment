@@ -1,0 +1,17 @@
+qdrant-client
+transformers
+sentence-transformers
+datasets
+torch
+accelerate
+bitsandbytes
+nltk
+rouge_score
+numpy
+pandas
+ipywidgets
+peft
+trl
+scipy
+wandb
+python-dotenv

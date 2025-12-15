@@ -1,16 +1,22 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from .config import RAGConfig
+"""
+RAG Generator module.
+
+Wrapper around the Language Model (Gemma) to generate natural language answers
+based on retrieved context modules.
+"""
 
 class RAGGenerator:
+    """
+    Generates answers using a CausalLM based on retrieved context.
+    """
     def __init__(self, config: RAGConfig):
         self.config = config
         print(f"Loading LLM: {self.config.LLM_MODEL_NAME}")
         
         # Optimize for Colab: using minimal types if possible, or mapping to auto device
-        # Note: gemma-3-1b-it might require authentication or agreeing to terms.
-        # Ensure the user is logged in via huggingface-cli login if this is a gated model.
-        # Assuming standard access or open model for this task.
         
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.LLM_MODEL_NAME, trust_remote_code=True)
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -33,10 +39,15 @@ class RAGGenerator:
     def generate_answer(self, query: str, context: str, do_sample: bool = True) -> str:
         """
         Generates an answer given the query and context.
+
         Args:
-            query: The user question.
-            context: The retrieved context.
-            do_sample: If True, uses random sampling (creative). If False, uses greedy decoding (deterministic/eval).
+            query (str): The user question.
+            context (str): The retrieved context string.
+            do_sample (bool): If True, uses random sampling (creative). 
+                              If False, uses greedy decoding (deterministic/eval).
+
+        Returns:
+            str: The generated response text.
         """
         
         # System Prompt for Safety & Grounding
@@ -46,7 +57,6 @@ class RAGGenerator:
         )
         
         # Construct Prompt using Chat Template
-        # Note: Gemma chat template might handle system roles differently, but usually 'user' with instructions works well.
         
         messages = [
             {"role": "user", "content": f"{system_prompt}\n\nContext:\n{context}\n\nQuestion:\n{query}"}

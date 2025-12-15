@@ -1,15 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
 .env
-
-# Project Data
-data/
-*.db
-*.sqlite
-parents_map.json
-
-# Jupyter
-.ipynb_checkpoints
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+rag/data/
+finetuning/output_qlora/
+finetuning/output_galore/

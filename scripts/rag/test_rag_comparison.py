@@ -13,8 +13,17 @@ from rag.generator import RAGGenerator
 from rag.evaluator import Evaluator
 from rag.data_loader import DataLoader
 from rag.chunking import HierarchicalChunker
+"""
+RAG Comparison Script.
+
+Compare Base Retrieval vs. Reranked Retrieval on a subsample of questions
+to validate the benefits of the reranker.
+"""
 
 def run_comparison():
+    """
+    Runs the comparison between Base and Reranked retrieval strategies.
+    """
     print("--- Initializing RAG Components for Comparison ---")
     config = RAGConfig()
     vdb = VectorDBHandler(config)
@@ -94,26 +103,26 @@ def run_comparison():
         reference = qa['answer1']
         print(f"\nQ: {question}")
         
-        # 1. Base Retrieval
+        # Base Retrieval
         print("  Running Base Retrieval...")
         ctx_base = retriever.retrieve_context(question, top_k=config.TOP_K, use_reranker=False)
         ans_base = generator.generate_answer(question, ctx_base, do_sample=False)
         
-        # 2. Reranked Retrieval
+        # Reranked Retrieval
         print("  Running Reranked Retrieval...")
         ctx_rerank = retriever.retrieve_context(question, top_k=config.TOP_K, use_reranker=True)
-        # Note: We can also check deterministic vs creative. For Eval, prefer False.
+        # Check deterministic vs creative. For Eval, prefer False.
         ans_rerank = generator.generate_answer(question, ctx_rerank, do_sample=False)
         
         # Eval
-        score_base = evaluator.evaluate(ans_base, reference)
-        score_rerank = evaluator.evaluate(ans_rerank, reference)
+        score_base = evaluator.calculate_metrics(reference, ans_base)
+        score_rerank = evaluator.calculate_metrics(reference, ans_rerank)
         
         results.append({
             "Question": question[:50] + "...",
-            "Base ROUGE": round(score_base['rouge'], 4),
-            "Rerank ROUGE": round(score_rerank['rouge'], 4),
-            "Improvement": round(score_rerank['rouge'] - score_base['rouge'], 4)
+            "Base ROUGE": round(score_base['rouge_l'], 4),
+            "Rerank ROUGE": round(score_rerank['rouge_l'], 4),
+            "Improvement": round(score_rerank['rouge_l'] - score_base['rouge_l'], 4)
         })
         
     df = pd.DataFrame(results)

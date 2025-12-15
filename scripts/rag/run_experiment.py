@@ -2,7 +2,12 @@ import os
 import json
 import pandas as pd
 import torch
+import sys
 from tqdm import tqdm
+
+# Add project root to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from rag.config import RAGConfig
 from rag.data_loader import DataLoader
 from rag.chunking import HierarchicalChunker
@@ -10,11 +15,23 @@ from rag.vector_db import VectorDBHandler
 from rag.retriever import HierarchicalRetriever
 from rag.generator import RAGGenerator
 from rag.evaluator import Evaluator
+"""
+Full RAG Experiment Script.
+
+Runs the complete pipeline:
+1. Data loading.
+2. Chunking and Indexing.
+3. RAG Setup (Retriever, Generator).
+4. Evaluation loop comparing Baseline vs. RAG.
+"""
 
 def main():
+    """
+    Main experiment function.
+    """
     config = RAGConfig()
     
-    # 1. Data Loading
+    # Data Loading
     print(">>> Stage 1: Data Loading")
     loader = DataLoader(config)
     book_text = loader.download_book()
@@ -23,7 +40,7 @@ def main():
     # Limit QA pairs for quick testing/demo (remove limit for full run)
     # qa_pairs = qa_pairs[:10] 
     
-    # 2. Chunking & Indexing
+    # Chunking & Indexing
     print(">>> Stage 2: Chunking & Indexing")
     chunker = HierarchicalChunker(
         parent_chunk_size=config.PARENT_CHUNK_SIZE,
@@ -38,19 +55,15 @@ def main():
     vdb.create_collection()
     
     # Check if already indexed (simple check: if collection count > 0)
-    # For this task, we can just re-index or check count. 
-    # Let's assume re-indexing for safety or checking if empty.
+    # Check index existence 
+    # Checking if empty.
     collection_info = vdb.client.get_collection(vdb.collection_name)
     if collection_info.points_count == 0:
         print("Indexing data...")
         # Need embedding model for indexing
-        # We can reuse the retriever's encoder logic or instantiate here.
-        # Let's instantiate a temporary retriever to access encoder or standalone.
-        # Better: use Retriever class just for encoding helper if possible or separate.
-        # We'll just instantiate SentenceTransformer here to keep it simple.
-        from sentence_transformers import SentenceTransformer
-        encoder = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
-        
+        # Use the retriever's encoder for consistency, even if instantiated temporarily
+        # This ensures the same embedding model is used for indexing and retrieval.
+        encoder = HierarchicalRetriever.get_encoder(config)
         child_texts = [c['text'] for c in chunks_data['children']]
         embeddings = encoder.encode(child_texts).tolist()
         
@@ -58,13 +71,16 @@ def main():
     else:
         print(f"Index already contains {collection_info.points_count} points. Skipping indexing.")
 
-    # 3. Setup Components
+    # Setup Components
     print(">>> Stage 3: Setting up RAG Components")
-    retriever = HierarchicalRetriever(config, vdb, chunks_data['parents'])
+    # Encoder needed for retriever
+    encoder = HierarchicalRetriever.get_encoder(config)
+    
+    retriever = HierarchicalRetriever(config, vdb, chunks_data['parents'], embedding_model=encoder)
     generator = RAGGenerator(config)
     evaluator = Evaluator()
     
-    # 4. Evaluation Loop
+    # Evaluation Loop
     print(">>> Stage 4: Running Evaluation")
     results = []
     
@@ -73,12 +89,12 @@ def main():
         ground_truth = qa['answer1']
         
         # A. Baseline (Zero-shot, No Context)
-        # Note: We provide empty context or instruction to answer from knowledge.
+        # Provide empty context or instruction to answer from knowledge
         baseline_answer = generator.generate_answer(question, context="")
         baseline_metrics = evaluator.calculate_metrics(ground_truth, baseline_answer)
         
         # B. RAG
-        context = retriever.retrieve(question)
+        context = retriever.retrieve_context(question)
         rag_answer = generator.generate_answer(question, context)
         rag_metrics = evaluator.calculate_metrics(ground_truth, rag_answer)
         
@@ -94,7 +110,7 @@ def main():
             "RAG_ROUGE": rag_metrics['rouge_l']
         })
 
-    # 5. Reporting
+    # Reporting
     df = pd.DataFrame(results)
     
     print("\n>>> Results Summary:")

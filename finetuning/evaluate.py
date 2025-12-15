@@ -14,12 +14,29 @@ from peft import PeftModel
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge_score import rouge_scorer
 
+"""
+Evaluation script for finetuned Gemma models.
+
+This script loads a base, QLoRA, or GaLore model and evaluates it on a test dataset
+using BLEU and ROUGE metrics.
+"""
+
 # Configuration
 MODEL_ID = "google/gemma-3-1b-it"
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 TEST_FILE = os.path.join(DATA_DIR, 'finetune_test.jsonl')
 
 def load_model(model_type, model_path=None):
+    """
+    Loads the requested model type (base, qlora, galore).
+
+    Args:
+        model_type (str): Type of model to load ("base", "qlora", "galore").
+        model_path (str, optional): Path to adapters or full model directory.
+
+    Returns:
+        tuple: A tuple containing (model, tokenizer).
+    """
     print(f"Loading {model_type} model...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
@@ -68,6 +85,15 @@ def load_model(model_type, model_path=None):
     return model, tokenizer
 
 def format_prompt(sample):
+    """
+    Formats the sample into a prompt for generation (excluding output).
+
+    Args:
+        sample (dict): A dictionary containing 'instruction' and optionally 'input'.
+
+    Returns:
+        str: The formatted prompt string.
+    """
     instruction = sample['instruction']
     input_text = sample.get('input', '')
     
@@ -78,6 +104,16 @@ def format_prompt(sample):
     return text
 
 def calculate_metrics(predictions, references):
+    """
+    Calculates BLEU-4 and ROUGE-L metrics.
+
+    Args:
+        predictions (list): List of generated response strings.
+        references (list): List of ground truth response strings.
+
+    Returns:
+        tuple: (avg_bleu, avg_rouge) scores.
+    """
     rouge = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     bleu_scores = []
     rouge_scores = []
@@ -139,7 +175,7 @@ def main():
         generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         # Extract raw response part:
         # Prompt ends with "### Response:\n"
-        # We can split by it.
+        # Splitting by marker
         if "### Response:" in generated_text:
             response = generated_text.split("### Response:")[-1].strip()
         else:

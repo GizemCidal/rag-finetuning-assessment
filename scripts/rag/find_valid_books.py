@@ -15,14 +15,14 @@ for row in ds:
     # Filter only for Gutenberg books
     if doc['kind'] == 'gutenberg':
         doc_id = doc['id']
-        title = doc['start'] # NarrativeQA often puts title/metadata in start or we can use keys if available
+        title = doc['start'] # NarrativeQA often puts title/metadata in start (or use keys if available)
         # Better extraction: usually the text is in 'text', but we want metadata.
         # Actually NarrativeQA has a 'document' dict with 'kind', 'url', 'file_size', etc.
         
-        # Let's count questions per document ID
+        # Count questions per document ID
         book_stats[doc_id] += 1
         
-        # Try to find a readable title if possible, or just use the ID/URL
+        # Try to find a readable title if possible, or use the ID/URL
         book_titles[doc_id] = doc.get('url', 'No URL')
 
 # Sort by number of questions

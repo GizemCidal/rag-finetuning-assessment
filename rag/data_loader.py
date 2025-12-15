@@ -4,12 +4,29 @@ import re
 from datasets import load_dataset
 from .config import RAGConfig
 
+"""
+Data loading and preprocessing module.
+
+Handles downloading books from Project Gutenberg, cleaning text (header/footer removal,
+normalization), and loading QA pairs from NarrativeQA for evaluation.
+"""
+
 class DataLoader:
+    """
+    Handles downloading and processing of book data.
+    """
     def __init__(self, config: RAGConfig):
         self.config = config
 
     def download_book(self):
-        """Downloads the book text from Project Gutenberg."""
+        """
+        Downloads the book text from Project Gutenberg.
+
+        Checks if the file already exists locally; if not, downloads and cleans it.
+
+        Returns:
+            str: The raw text content of the book.
+        """
         file_path = os.path.join(self.config.DATA_DIR, self.config.BOOK_FILENAME)
         if os.path.exists(file_path):
             print(f"Book already exists at {file_path}")
@@ -18,13 +35,13 @@ class DataLoader:
         
         print(f"Downloading book from {self.config.BOOK_URL}...")
         try:
-            # Note: Gutenberg often redirects or requires User-Agent
+            # Gutenberg often redirects or requires User-Agent
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
             response = requests.get(self.config.BOOK_URL, headers=headers)
             response.raise_for_status()
             text = response.text
             
-            # Basic cleaning: remove Byte Order Mark if present
+            # Clean Byte Order Mark if present
             if text.startswith('\ufeff'):
                 text = text[1:]
 
@@ -44,8 +61,16 @@ class DataLoader:
             raise
 
     def _clean_gutenberg_text(self, text: str) -> str:
-        """Removes Project Gutenberg headers and footers."""
-        # Simple heuristic markers
+        """
+        Removes Project Gutenberg headers and footers.
+
+        Args:
+            text (str): The raw text with Gutenberg markers.
+
+        Returns:
+            str: The cleaned text within the markers.
+        """
+        # Markers
         start_markers = ["*** START OF THE PROJECT GUTENBERG EBOOK", "*** START OF THIS PROJECT GUTENBERG EBOOK"]
         end_markers = ["*** END OF THE PROJECT GUTENBERG EBOOK", "*** END OF THIS PROJECT GUTENBERG EBOOK"]
         
@@ -74,25 +99,39 @@ class DataLoader:
     def _normalize_text(self, text: str) -> str:
         """
         Normalizes whitespace and unwraps hard-wrapped lines common in Gutenberg texts.
+        
+        Converts double newlines to paragraph markers to preserve structure,
+        removes single newlines to unwrap lines, and then restores paragraphs.
+
+        Args:
+            text (str): Input text.
+
+        Returns:
+            str: Normalized text.
         """
-        # 1. Protect Paragraphs: Convert double newlines to a special marker
-        # We look for 2 or more newlines and replace with a marker
+        # Protect Paragraphs: Convert double newlines to a special marker
+        # Look for 2 or more newlines and replace with a marker
         text = re.sub(r'\n{2,}', ' [[PARAGRAPH]] ', text)
         
-        # 2. Unwrap Lines: Convert remaining single newlines to spaces
+        # Unwrap Lines: Convert remaining single newlines to spaces
         # This fixes: "broken\nlines" -> "broken lines"
         text = text.replace('\n', ' ')
         
-        # 3. Restore Paragraphs: Convert marker back to double newlines
+        # Restore Paragraphs: Convert marker back to double newlines
         text = text.replace(' [[PARAGRAPH]] ', '\n\n')
         
-        # 4. Collapse Whitespace: '  ' -> ' '
+        # Collapse Whitespace: '  ' -> ' '
         text = re.sub(r'[ \t]+', ' ', text)
         
         return text.strip()
 
     def load_qa_pairs(self):
-        """Loads and filters QA pairs for the specific book from NarrativeQA."""
+        """
+        Loads and filters QA pairs for the specific book from NarrativeQA.
+
+        Returns:
+            list: A list of dicts, each containing 'question', 'answer1', 'answer2', and 'doc_id'.
+        """
         # Using the exact ID logic found in debugging
         print(f"Loading NarrativeQA test split for ID {self.config.BOOK_ID}...")
         ds = load_dataset("narrativeqa", split="test", trust_remote_code=True)

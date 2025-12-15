@@ -4,8 +4,17 @@ from sentence_transformers import SentenceTransformer
 import os
 from .config import RAGConfig
 from typing import List, Dict
+"""
+Vector Database module.
+
+Manages connections to Qdrant, including creating collections, upserting chunk embeddings,
+and searching for vectors.
+"""
 
 class VectorDBHandler:
+    """
+    Manages Qdrant vector database interactions.
+    """
     def __init__(self, config: RAGConfig):
         self.config = config
         # Initialize Qdrant Client (Disk mode)
@@ -32,7 +41,13 @@ class VectorDBHandler:
             print(f"Collection {self.collection_name} already exists.")
 
     def upsert_chunks(self, children: List[Dict], embeddings: List[List[float]]):
-        """Upserts child chunks with their embeddings and metadata (parent_id)."""
+        """
+        Upserts child chunks with their embeddings and metadata (parent_id).
+
+        Args:
+            children (List[Dict]): List of child chunk dictionaries.
+            embeddings (List[List[float]]): Corresponding embeddings for the chunks.
+        """
         points = []
         for i, child in enumerate(children):
             points.append(models.PointStruct(
@@ -56,7 +71,16 @@ class VectorDBHandler:
         print(f"Upserted {len(points)} points.")
 
     def search(self, query_vector: List[float], top_k: int = 5):
-        """Searches for closest child chunks."""
+        """
+        Searches for closest child chunks.
+
+        Args:
+           query_vector (List[float]): The embedding vector of the query.
+           top_k (int): Number of closest points to return.
+
+        Returns:
+            list: List of ScoredPoint objects from Qdrant.
+        """
         results = self.client.query_points(
             collection_name=self.collection_name,
             query=query_vector,

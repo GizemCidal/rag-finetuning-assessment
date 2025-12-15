@@ -9,27 +9,24 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from rag.config import RAGConfig
 from rag.generator import RAGGenerator
 from rag.evaluator import Evaluator
-# We don't use DataLoader for QA pairs to avoid depending on huge datasets library if it fails,
-# but ideally we should. specific hardcoded list or smaller json if available?
-# Let's try to use the hardcoded list from comparison script for consistency and speed, 
-# or try a safe load if possible. For now, strict compliance suggests using the Test Split.
-# I will use the hardcoded questions for reliability in this script, or we can try importing DataLoader.
-# Let's import DataLoader but wrap in try-except or use the known filtered list logic.
-
-# Actually, to be "100% compliant", we should try to load the actual QA pairs.
-# But since datasets caused issues in the script env previously, I will use a robust fallback.
 from rag.data_loader import DataLoader
+"""
+Baseline benchmark script.
+
+Evaluates the performance of the model using zero-shot generation (RAG free) on the test dataset.
+"""
 
 def run_baseline_benchmark():
+    """
+    Runs the baseline generation (no context) on the QA pairs and calculates metrics.
+    """
     config = RAGConfig()
     generator = RAGGenerator(config) # Model only
     evaluator = Evaluator()
     
-    print("--- 1. Loading QA Data (Baseline) ---")
+    print("--- Loading QA Data (Baseline) ---")
     try:
         loader = DataLoader(config)
-        # We need to make sure this works in script mode. 
-        # If it fails, I'll fallback to the hardcoded list.
         qa_pairs = loader.load_qa_pairs()
         print(f"Loaded {len(qa_pairs)} QA pairs from NarrativeQA.")
     except Exception as e:
@@ -38,15 +35,11 @@ def run_baseline_benchmark():
             {"question": "Who are Zuleika's most prominent suitors?", "answer1": "The Duke of Dorset and Noaks."},
             {"question": "Why does Zuleika reject the Duke?", "answer1": "Because he is not 'hopeless' enough; she only loves those she cannot have."},
             {"question": "Who is the first person Zuleika falls in love with?", "answer1": "She has never loved anyone."},
-            # Add more if needed or just use these representatives
+            # Add more if needed or use these representatives
         ]
     
-    # We only need a subset for the report if it takes too long, 
-    # but the task implies "For each question in your filtered NarrativeQA test set".
-    # There are ~40 pairs. We can run all.
-    
     results = []
-    print("\n--- 2. Running Baseline (No-Context) Evaluation ---")
+    print("\n--- Running Baseline (No-Context) Evaluation ---")
     
     for i, item in enumerate(tqdm(qa_pairs)):
         question = item['question']
@@ -55,14 +48,14 @@ def run_baseline_benchmark():
         # Zero-shot generation (No Context)
         answer = generator.generate_answer(question, context="", do_sample=False)
         
-        scores = evaluator.evaluate(answer, reference)
+        scores = evaluator.calculate_metrics(reference, answer)
         
         results.append({
             "Question": question,
             "Target": reference,
             "Generated": answer,
-            "BLEU": scores['bleu'],
-            "ROUGE": scores['rouge']
+            "BLEU": scores['bleu4'],
+            "ROUGE": scores['rouge_l']
         })
         
     # Calculate Averages

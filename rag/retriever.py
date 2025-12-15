@@ -4,7 +4,18 @@ from .config import RAGConfig
 from .vector_db import VectorDBHandler
 from .reranker import Reranker
 
+"""
+Retrieval module.
+
+Implements hierarchical retrieval where queries search against child chunks,
+but the expanded parent chunks are returned to provide better context.
+"""
+
 class HierarchicalRetriever:
+    """
+    Handles hierarchical retrieval of document chunks.
+    """
+    
     def __init__(self, config: RAGConfig, vector_db: VectorDBHandler, parents_map: Dict[str, str], embedding_model):
         self.config = config
         self.vector_db = vector_db
@@ -16,6 +27,11 @@ class HierarchicalRetriever:
         # Initialize Reranker
         self.reranker = Reranker(config)
 
+    @staticmethod
+    def get_encoder(config: RAGConfig):
+        """Returns the shared encoder instance."""
+        return SentenceTransformer(config.EMBEDDING_MODEL_NAME)
+
     def encode(self, texts: List[str]) -> List[List[float]]:
         """Generates embeddings."""
         return self.encoder.encode(texts).tolist()
@@ -23,6 +39,7 @@ class HierarchicalRetriever:
     def retrieve_context(self, query: str, top_k: int = 5, use_reranker: bool = True) -> str:
         """
         Retrieves context for a query.
+        
         Strategy:
         1. Embed Query
         2. Search Top-K * 3 Child Chunks (fetch more candidates)
@@ -30,6 +47,14 @@ class HierarchicalRetriever:
         4. Retrieve Parent Texts
         5. (Optional) Rerank Parent Texts
         6. Return Top-K Parents
+
+        Args:
+            query (str): The search query.
+            top_k (int): Number of final context chunks to return.
+            use_reranker (bool): Whether to apply re-ranking.
+
+        Returns:
+            str: The final context string (joined parent chunks).
         """
         query_vector = self.encode([query])[0]
         
@@ -58,7 +83,7 @@ class HierarchicalRetriever:
             # Rerank the parent chunks directly against the query
             final_docs = self.reranker.rerank(query, candidate_parents, top_k=top_k)
         else:
-            # Just take the top_k found
+            # Take top_k found
             final_docs = candidate_parents[:top_k]
                 
         # Join parents with some separator

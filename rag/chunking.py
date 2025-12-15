@@ -1,21 +1,39 @@
-from typing import List, Dict
 import uuid
+from typing import List, Dict
+
+"""
+Text chunking module for RAG.
+
+This module provides hierarchical chunking logic, splitting text into larger parent chunks
+to preserve context and smaller child chunks for precise retrieval.
+"""
 
 class HierarchicalChunker:
+    """
+    Splits text into parent and child chunks for hierarchical retrieval.
+    
+    Attributes:
+        parent_chunk_size (int): Size of parent chunks.
+        child_chunk_size (int): Size of child chunks.
+        overlap (int): Overlap between chunks.
+    """
     def __init__(self, parent_chunk_size: int = 1000, child_chunk_size: int = 250, overlap: int = 50):
         self.parent_chunk_size = parent_chunk_size
         self.child_chunk_size = child_chunk_size
         self.overlap = overlap
 
     def _split_text(self, text: str, chunk_size: int, overlap: int) -> List[str]:
-        """Simple sliding window text splitter."""
-        # Clean text basic normalization could go here
-        words = text.split() # Splitting by words to be safer than chars for "meaning"
-        # However, for strict size limits, char splitting is often used. 
-        # Let's use character-based splitting with some heuristics for sentence boundaries if we had time,
-        # but for this task, a robust overlapping window or N-word window is good.
-        # Let's stick to character count for simplicity but try to respect word boundaries if possible.
-        
+        """
+        Splits text into chunks using a sliding window.
+
+        Args:
+            text (str): Input text to split.
+            chunk_size (int): Target size of each chunk.
+            overlap (int): Number of characters to overlap.
+
+        Returns:
+            List[str]: List of text chunks.
+        """
         chunks = []
         start = 0
         text_len = len(text)
@@ -46,26 +64,27 @@ class HierarchicalChunker:
 
     def chunk_data(self, text: str) -> Dict:
         """
-        Produce a structure:
-        {
-            "parents": {parent_id: parent_text},
-            "children": [
-                 {"child_id": cid, "text": ctext, "parent_id": pid}
-            ]
-        }
+        Processes text into hierarchical chunks (parents and children).
+
+        Args:
+            text (str): The full input text.
+
+        Returns:
+            Dict: A dictionary containing:
+                - "parents": {parent_id: parent_text}
+                - "children": [{"child_id": str, "text": str, "parent_id": str}]
         """
         parents = {}
         children = []
         
-        # 1. Create Parent Chunks
+        # Create Parent Chunks
         parent_texts = self._split_text(text, self.parent_chunk_size, self.overlap)
         
         for p_idx, p_text in enumerate(parent_texts):
             p_id = str(uuid.uuid4())
             parents[p_id] = p_text
             
-            # 2. Create Child Chunks from this Parent
-            # Note: We are splitting the PARENT text, so the children are guaranteed to be within the parent context.
+            # Create Child Chunks from this Parent
             child_texts = self._split_text(p_text, self.child_chunk_size, self.overlap)
             
             for c_text in child_texts:

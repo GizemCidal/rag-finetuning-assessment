@@ -1,6 +1,13 @@
 import os
+"""
+Configuration module for the RAG pipeline.
+
+Contains all paths, model parameters, constants, and hyperparameters used across
+retrieval and generation.
+"""
 
 class RAGConfig:
+    """Configuration class for RAG pipeline parameters."""
     # Paths
     PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     DATA_DIR = os.path.join(PROJECT_ROOT, 'rag', 'data')
@@ -18,8 +25,7 @@ class RAGConfig:
     LLM_MODEL_NAME = "google/gemma-3-1b-it"
     EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2" # Lightweight, good for Colab
     EMBEDDING_DIM = 384 # Explicitly correctly set for MiniLM-L6-v2, though dynamic check is better. 
-    # But since we use config for DB creation before loading model sometimes, keeping it or inferring later.
-    # User requested explicit dynamic check, but config is static. I'll allow DB to use this or dynamic.
+    EMBEDDING_DIM = 384
     
     # Chunking
     CHUNK_UNIT = "chars"

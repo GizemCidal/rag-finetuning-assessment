@@ -10,8 +10,8 @@ def log_resource_usage(stage=""):
 import os
 import shutil
 # Mocking heavy libraries to test logic if they are not installed or to speed up
-# But we should try to use real ones if possible for "integration test".
-# For the purpose of "Does it work?", we will try to run the real components 
+# Should use real ones if possible for "integration test".
+# Test the pipeline components with minimal data 
 # but mock the LLM generation which requires Auth/Download.
 
 # Ensure src is in path
@@ -21,11 +21,20 @@ from rag.config import RAGConfig
 from rag.data_loader import DataLoader
 from rag.chunking import HierarchicalChunker
 from rag.vector_db import VectorDBHandler
+"""
+Local Pipeline Test Script.
+
+Unit/Integration test for RAG components (DataLoader, Chunker, VectorDB) to ensure
+they function correctly before running full experiments.
+"""
 
 def test_pipeline():
+    """
+    Runs a smoke test on the pipeline components.
+    """
     print("=== Testing RAG Pipeline Logic ===")
     
-    # 1. Config
+    # Config
     config = RAGConfig()
     # Use a temp qdrant path for testing
     config.QDRANT_PATH = os.path.join(config.DATA_DIR, "qdrant_test_db")
@@ -35,15 +44,15 @@ def test_pipeline():
     print(f"[OK] Config loaded. DB Path: {config.QDRANT_PATH}")
     log_resource_usage("Config Load")
     
-    # 2. Data Loader
+    # Data Loader
     print("\n--- Testing Data Loader ---")
     loader = DataLoader(config)
     try:
         book_text = loader.download_book()
         print(f"[OK] Book Downloaded. Length: {len(book_text)} chars")
         
-        # Test just the load function not the download (streaming dataset might be slow)
-        # But let's try to fetch a few rows
+        # Test the load function (downloading streaming dataset might be slow)
+        # Fetch a few rows
         qa_pairs = loader.load_qa_pairs()
         print(f"[OK] QA Pairs Loaded. Count: {len(qa_pairs)}")
     except Exception as e:
@@ -51,7 +60,7 @@ def test_pipeline():
         return
     log_resource_usage("Data Load")
 
-    # 3. Chunking
+    # Chunking
     print("\n--- Testing Hierarchical Chunking ---")
     chunker = HierarchicalChunker(parent_chunk_size=500, child_chunk_size=100, overlap=20)
     # Test on small text to avoid OOM in test environment
@@ -71,7 +80,7 @@ def test_pipeline():
         print(f"[OK] Chunking Complete. Parents: {len(parents)}, Children: {len(children)}")
     log_resource_usage("Chunking")
 
-    # 4. Vector DB (Qdrant)
+    # Vector DB (Qdrant)
     print("\n--- Testing Vector DB (Local) ---")
     try:
         vdb = VectorDBHandler(config)
