@@ -1,7 +1,3 @@
-# DS/MLE Candidate Take-Home Assessment
-
-This repository contains the take-home assessment tasks for Data Scientist / Machine Learning Engineer candidates.
-
 ## Tasks Overview
 
 The assessment consists of two distinct tasks, designed to evaluate a range of advanced skills in Natural Language Processing and Large Language Models.
