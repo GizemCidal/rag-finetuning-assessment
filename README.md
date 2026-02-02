@@ -11,9 +11,3 @@ The assessment consists of two distinct tasks, designed to evaluate a range of a
     *   **Description:** Finetune a small language model using two different Parameter-Efficient Fine-Tuning (PEFT) techniques, comparing their performance, resource consumption, and discussing potential generalization.
     *   **Location:** [`finetuning/finetuning-task.md`](./finetuning/finetuning-task.md)
     *   **Final Report:** [`finetuning/report.md`](./finetuning/report.md)
-
-## Instructions
-
-Please refer to the individual Markdown files linked above for detailed instructions, objectives, components, evaluation criteria, and deliverables for each task.
-
-Good luck!
